@@ -1,13 +1,16 @@
 package com.example.ultimatelist;
 
+import android.content.Intent;
 import android.os.Bundle;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.view.View;
 
+import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -19,11 +22,15 @@ import com.example.ultimatelist.databinding.ActivityMainBinding;
 
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
     private ActivityMainBinding binding;
+    private EntryViewModel mEntryViewModel;
+
+    public static final int NEW_ENTRY_ACTIVITY_REQUEST_CODE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,17 +44,24 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        setSupportActionBar(binding.toolbar);
+        mEntryViewModel = new ViewModelProvider(this).get(EntryViewModel.class);
 
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+        mEntryViewModel.getAllEntries().observe(this, entries -> {
+            // Update the cached copy of the entries in the adapter.
+            adapter.submitList(entries);
+        });
+
+        //setSupportActionBar(binding.toolbar);
+
+       /* NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
         appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-
+        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);*/
         binding.fab.setOnClickListener(new View.OnClickListener() {
+            FloatingActionButton fab = findViewById(R.id.fab);
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                Intent intent = new Intent(MainActivity.this, NewEntryActivity.class);
+                startActivityForResult(intent, NEW_ENTRY_ACTIVITY_REQUEST_CODE);
             }
         });
     }
@@ -80,4 +94,19 @@ public class MainActivity extends AppCompatActivity {
         return NavigationUI.navigateUp(navController, appBarConfiguration)
                 || super.onSupportNavigateUp();
     }
+
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == NEW_ENTRY_ACTIVITY_REQUEST_CODE && resultCode == RESULT_OK) {
+            Entry entry = new Entry(data.getStringExtra(NewEntryActivity.EXTRA_REPLY));
+            mEntryViewModel.insert(entry);
+        } else {
+            Toast.makeText(
+                    getApplicationContext(),
+                    R.string.empty_not_saved,
+                    Toast.LENGTH_LONG).show();
+        }
+    }
 }
+
